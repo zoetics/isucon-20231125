@@ -5,16 +5,18 @@ package main
 
 import (
 	"fmt"
+	"github.com/labstack/echo-contrib/pprof"
+	"github.com/labstack/echo/v4"
 	"log"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/exec"
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/gorilla/sessions"
@@ -127,6 +129,7 @@ func main() {
 	cookieStore.Options.Domain = "*.u.isucon.dev"
 	e.Use(session.Middleware(cookieStore))
 	// e.Use(middleware.Recover())
+	pprof.Register(e)
 
 	// 初期化
 	e.POST("/api/initialize", initializeHandler)
