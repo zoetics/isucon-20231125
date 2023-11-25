@@ -31,7 +31,7 @@ type ReactionListGroupByUserId struct {
 	Reaction int64 `db:"reaction" json:"reaction"`
 }
 type TipsListGroupByUserId struct {
-	LivestreamID int64 `db:"user_id" json:"user_id"`
+	UserID int64 `db:"user_id" json:"user_id"`
 	SumTip       int64 `db:"sum_tip" json:"sum_tip"`
 }
 
