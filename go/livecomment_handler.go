@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/exp/slices"
 	"net/http"
 	"strconv"
 	"time"
@@ -202,24 +203,31 @@ func postLivecommentHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
 	}
 
-	var hitSpam int
+	var ngwordStrs []string
 	for _, ngword := range ngwords {
-		query := `
-		SELECT COUNT(*)
-		FROM
-		(SELECT ? AS text) AS texts
-		INNER JOIN
-		(SELECT CONCAT('%', ?, '%')	AS pattern) AS patterns
-		ON texts.text LIKE patterns.pattern;
-		`
-		if err := tx.GetContext(ctx, &hitSpam, query, req.Comment, ngword.Word); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get hitspam: "+err.Error())
-		}
-		c.Logger().Infof("[hitSpam=%d] comment = %s", hitSpam, req.Comment)
-		if hitSpam >= 1 {
-			return echo.NewHTTPError(http.StatusBadRequest, "このコメントがスパム判定されました")
-		}
+		ngwordStrs = append(ngwordStrs, ngword.Word)
 	}
+	// コメント に ngwords が含まれてるかチェック
+	if slices.Contains(ngwordStrs, req.Comment) {
+		return echo.NewHTTPError(http.StatusBadRequest, "このコメントがスパム判定されました")
+	}
+	//for _, ngword := range ngwords {
+	//	query := `
+	//	SELECT COUNT(*)
+	//	FROM
+	//	(SELECT ? AS text) AS texts
+	//	INNER JOIN
+	//	(SELECT CONCAT('%', ?, '%')	AS pattern) AS patterns
+	//	ON texts.text LIKE patterns.pattern;
+	//	`
+	//	if err := tx.GetContext(ctx, &hitSpam, query, req.Comment, ngword.Word); err != nil {
+	//		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get hitspam: "+err.Error())
+	//	}
+	//	c.Logger().Infof("[hitSpam=%d] comment = %s", hitSpam, req.Comment)
+	//	if hitSpam >= 1 {
+	//		return echo.NewHTTPError(http.StatusBadRequest, "このコメントがスパム判定されました")
+	//	}
+	//}
 
 	now := time.Now().Unix()
 	livecommentModel := LivecommentModel{
