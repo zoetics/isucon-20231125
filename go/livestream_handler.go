@@ -542,7 +542,11 @@ func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*L
 
 	// 一括でユーザー情報を取得
 	userModels := make([]UserModel, len(livestreamModels))
-	if err := dbConn.SelectContext(ctx, &userModels, "SELECT * FROM users WHERE id IN (?)", uids); err != nil {
+	query, param, err := sqlx.In("SELECT * FROM users WHERE id IN (?)", uids)
+	if err != nil {
+		return nil, err
+	}
+	if err := dbConn.SelectContext(ctx, &userModels, query, param); err != nil {
 		return nil, err
 	}
 	// 一括でユーザーアイコンを取得
@@ -551,16 +555,24 @@ func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*L
 		Image  []byte `db:"image"`
 	}
 	icons := make([]IconModel, len(userModels))
-	if err := dbConn.SelectContext(ctx, &icons, "SELECT user_id, image  FROM user_icons WHERE user_id IN (?)", uids); err != nil {
+	query, param, err = sqlx.In("SELECT user_id, image  FROM user_icons WHERE user_id IN (?)", uids)
+	if err != nil {
+		return nil, err
+	}
+	if err := dbConn.SelectContext(ctx, &icons, query, param); err != nil {
 		return nil, err
 	}
 
 	// 一括でタグ情報を取得
-	allTags := GetTags()
-	lsts := make([]LivestreamTagModel, len(livestreamModels))
-	if err := dbConn.SelectContext(ctx, &lsts, "SELECT * FROM livestream_tags WHERE livestream_id IN (?)", ids); err != nil {
+	query, param, err = sqlx.In("SELECT * FROM livestream_tags WHERE livestream_id IN (?)", ids)
+	if err != nil {
 		return nil, err
 	}
+	lsts := make([]LivestreamTagModel, len(livestreamModels))
+	if err := dbConn.SelectContext(ctx, &lsts, query, param); err != nil {
+		return nil, err
+	}
+	allTags := GetTags()
 	Tags := make([][]Tag, len(livestreamModels))
 	for _, v := range lsts {
 		Tags[v.LivestreamID] = append(Tags[v.LivestreamID], allTags[v.TagID-1])
