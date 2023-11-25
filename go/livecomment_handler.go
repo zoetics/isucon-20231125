@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/exp/slices"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -203,14 +203,12 @@ func postLivecommentHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
 	}
 
-	var ngwordStrs []string
 	for _, ngword := range ngwords {
-		ngwordStrs = append(ngwordStrs, ngword.Word)
+		if strings.Contains(req.Comment, ngword.Word) {
+			return echo.NewHTTPError(http.StatusBadRequest, "このコメントがスパム判定されました")
+		}
 	}
-	// コメント に ngwords が含まれてるかチェック
-	if slices.Contains(ngwordStrs, req.Comment) {
-		return echo.NewHTTPError(http.StatusBadRequest, "このコメントがスパム判定されました")
-	}
+	//var histspam int
 	//for _, ngword := range ngwords {
 	//	query := `
 	//	SELECT COUNT(*)
@@ -389,7 +387,7 @@ func moderateHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get last inserted NG word id: "+err.Error())
 	}
 
-	query := "DELETE FROM livecomments WHERE livestream_id = ? AND MATCH comment AGAINST(\"+?\" IN BOOLEAN MODE)"
+	query := `DELETE FROM livecomments WHERE livestream_id = ? AND MATCH comment AGAINST(? IN BOOLEAN MODE)`
 	if _, err := tx.ExecContext(ctx, query, livestreamID, req.NGWord); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete old livecomments that hit spams: "+err.Error())
 	}
