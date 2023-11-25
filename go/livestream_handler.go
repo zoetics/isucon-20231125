@@ -474,7 +474,7 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 	allTags := GetTags()
 	tags := make([]Tag, len(livestreamTagModels))
 	for i, v := range livestreamTagModels {
-		tags[i] = allTags[v.TagID]
+		tags[i] = allTags[v.TagID-1]
 	}
 
 	livestream := Livestream{
@@ -509,7 +509,7 @@ func fillLivestreamResponseForGet(ctx context.Context, livestreamModel Livestrea
 	allTags := GetTags()
 	tags := make([]Tag, len(livestreamTagModels))
 	for i, v := range livestreamTagModels {
-		tags[i] = allTags[v.TagID]
+		tags[i] = allTags[v.TagID-1]
 	}
 
 	livestream := Livestream{
