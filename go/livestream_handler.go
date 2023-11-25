@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -197,14 +198,18 @@ func searchLivestreamsHandler(c echo.Context) error {
 		}
 	}
 
-	livestreams := make([]Livestream, len(livestreamModels))
-	for i := range livestreamModels {
-		livestream, err := fillLivestreamResponseForGet(ctx, *livestreamModels[i])
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livestream: "+err.Error())
-		}
-		livestreams[i] = livestream
+	//livestreams := make([]Livestream, len(livestreamModels))
+	livestreams, err := fillLivestreamResponseForBulkGet(ctx, livestreamModels)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livestream: "+err.Error())
 	}
+	//for i := range livestreamModels {
+	//	livestream, err := fillLivestreamResponseForGet(ctx, *livestreamModels[i])
+	//	if err != nil {
+	//		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livestream: "+err.Error())
+	//	}
+	//	livestreams[i] = livestream
+	//}
 
 	return c.JSON(http.StatusOK, livestreams)
 }
@@ -524,4 +529,76 @@ func fillLivestreamResponseForGet(ctx context.Context, livestreamModel Livestrea
 		EndAt:        livestreamModel.EndAt,
 	}
 	return livestream, nil
+}
+
+// livestreamsのモデルを一括で取得
+func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*LivestreamModel) ([]Livestream, error) {
+	uids := make([]int64, len(livestreamModels))
+	ids := make([]int64, len(livestreamModels))
+	for i, v := range livestreamModels {
+		uids[i] = v.UserID
+		ids[i] = v.ID
+	}
+
+	// 一括でユーザー情報を取得
+	userModels := make([]UserModel, len(livestreamModels))
+	if err := dbConn.SelectContext(ctx, &userModels, "SELECT * FROM users WHERE id IN (?)", uids); err != nil {
+		return nil, err
+	}
+	// 一括でユーザーアイコンを取得
+	type IconModel struct {
+		UserId int64  `db:"user_id"`
+		Image  []byte `db:"image"`
+	}
+	icons := make([]IconModel, len(userModels))
+	if err := dbConn.SelectContext(ctx, &icons, "SELECT user_id, image  FROM user_icons WHERE user_id IN (?)", uids); err != nil {
+		return nil, err
+	}
+
+	// 一括でタグ情報を取得
+	allTags := GetTags()
+	lsts := make([]LivestreamTagModel, len(livestreamModels))
+	if err := dbConn.SelectContext(ctx, &lsts, "SELECT * FROM livestream_tags WHERE livestream_id IN (?)", ids); err != nil {
+		return nil, err
+	}
+	Tags := make([][]Tag, len(livestreamModels))
+	for _, v := range lsts {
+		Tags[v.LivestreamID] = append(Tags[v.LivestreamID], allTags[v.TagID-1])
+	}
+
+	// livesreams を作る
+	livestreams := make([]Livestream, len(livestreamModels))
+	for i, v := range livestreamModels {
+		var tu User
+		// userModelsからユーザー情報を取得
+		for _, u := range userModels {
+			if u.ID == v.UserID {
+				var ic []byte
+				// iconsからアイコンを取得
+				for _, icon := range icons {
+					if icon.UserId == u.ID {
+						ic = icon.Image
+						break
+					}
+				}
+				iconHash := sha256.Sum256(ic)
+				tu = User{ID: u.ID, Name: u.Name, DisplayName: u.DisplayName, Description: u.Description, IconHash: fmt.Sprintf("%x", iconHash)}
+				break
+			}
+		}
+
+		livestreams[i] = Livestream{
+			ID:           v.ID,
+			Owner:        tu,
+			Title:        v.Title,
+			Tags:         Tags[v.ID],
+			Description:  v.Description,
+			PlaylistUrl:  v.PlaylistUrl,
+			ThumbnailUrl: v.ThumbnailUrl,
+			StartAt:      v.StartAt,
+			EndAt:        v.EndAt,
+		}
+	}
+
+	return livestreams, nil
 }
