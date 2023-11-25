@@ -471,17 +471,10 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 		return Livestream{}, err
 	}
 
+	allTags := GetTags()
 	tags := make([]Tag, len(livestreamTagModels))
-	for i := range livestreamTagModels {
-		tagModel := TagModel{}
-		if err := tx.GetContext(ctx, &tagModel, "SELECT * FROM tags WHERE id = ?", livestreamTagModels[i].TagID); err != nil {
-			return Livestream{}, err
-		}
-
-		tags[i] = Tag{
-			ID:   tagModel.ID,
-			Name: tagModel.Name,
-		}
+	for i, v := range livestreamTagModels {
+		tags[i] = allTags[v.TagID-1]
 	}
 
 	livestream := Livestream{
@@ -513,17 +506,10 @@ func fillLivestreamResponseForGet(ctx context.Context, livestreamModel Livestrea
 		return Livestream{}, err
 	}
 
+	allTags := GetTags()
 	tags := make([]Tag, len(livestreamTagModels))
-	for i := range livestreamTagModels {
-		tagModel := TagModel{}
-		if err := dbConn.GetContext(ctx, &tagModel, "SELECT * FROM tags WHERE id = ?", livestreamTagModels[i].TagID); err != nil {
-			return Livestream{}, err
-		}
-
-		tags[i] = Tag{
-			ID:   tagModel.ID,
-			Name: tagModel.Name,
-		}
+	for i, v := range livestreamTagModels {
+		tags[i] = allTags[v.TagID-1]
 	}
 
 	livestream := Livestream{
