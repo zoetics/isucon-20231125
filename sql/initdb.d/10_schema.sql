@@ -82,6 +82,7 @@ CREATE TABLE `livecomments` (
   `created_at` BIGINT NOT NULL
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 CREATE INDEX livestream_id_idx ON livecomments(`livestream_id`);
+CREATE FULLTEXT INDEX comment_fulltext ON livecomments (comment) WITH PARSER ngram;
 
 -- ユーザからのライブコメントのスパム報告
 CREATE TABLE `livecomment_reports` (
