@@ -533,15 +533,12 @@ func fillLivestreamResponseForGet(ctx context.Context, livestreamModel Livestrea
 
 // livestreamsのモデルを一括で取得
 func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*LivestreamModel) ([]Livestream, error) {
-	var uids []int64
-	var ids []int64
-	//uids := make([]int64, len(livestreamModels))
-	//ids := make([]int64, len(livestreamModels))
+	uids := make([]int, len(livestreamModels))
+	ids := make([]int, len(livestreamModels))
 	for _, v := range livestreamModels {
-		uids = append(uids, v.UserID)
-		ids = append(ids, v.ID)
-		//uids[i] = v.UserID
-		//ids[i] = v.ID
+		// v.UserID を int にして uids に追加
+		uids = append(uids, int(v.UserID))
+		ids = append(ids, int(v.ID))
 	}
 
 	// 一括でユーザー情報を取得
@@ -550,7 +547,7 @@ func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*L
 	if err != nil {
 		return nil, err
 	}
-	if err := dbConn.SelectContext(ctx, &userModels, query, param); err != nil {
+	if err := dbConn.SelectContext(ctx, &userModels, query, param...); err != nil {
 		return nil, err
 	}
 	// 一括でユーザーアイコンを取得
@@ -559,11 +556,11 @@ func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*L
 		Image  []byte `db:"image"`
 	}
 	icons := make([]IconModel, len(userModels))
-	query, param, err = sqlx.In("SELECT user_id, image  FROM user_icons WHERE user_id IN (?)", uids)
+	query, param, err = sqlx.In("SELECT user_id, image  FROM icons WHERE user_id IN (?)", uids)
 	if err != nil {
 		return nil, err
 	}
-	if err := dbConn.SelectContext(ctx, &icons, query, param); err != nil {
+	if err := dbConn.SelectContext(ctx, &icons, query, param...); err != nil {
 		return nil, err
 	}
 
@@ -572,12 +569,12 @@ func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*L
 	if err != nil {
 		return nil, err
 	}
-	lsts := make([]LivestreamTagModel, len(livestreamModels))
-	if err := dbConn.SelectContext(ctx, &lsts, query, param); err != nil {
+	var lsts []LivestreamTagModel
+	if err := dbConn.SelectContext(ctx, &lsts, query, param...); err != nil {
 		return nil, err
 	}
 	allTags := GetTags()
-	Tags := make([][]Tag, len(livestreamModels))
+	Tags := make(map[int64][]Tag)
 	for _, v := range lsts {
 		Tags[v.LivestreamID] = append(Tags[v.LivestreamID], allTags[v.TagID-1])
 	}
@@ -601,6 +598,10 @@ func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*L
 				tu = User{ID: u.ID, Name: u.Name, DisplayName: u.DisplayName, Description: u.Description, IconHash: fmt.Sprintf("%x", iconHash)}
 				break
 			}
+		}
+		// tagないときは空配列を入れる
+		if Tags[v.ID] == nil {
+			Tags[v.ID] = []Tag{}
 		}
 
 		livestreams[i] = Livestream{
