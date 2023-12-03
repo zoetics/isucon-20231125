@@ -68,6 +68,13 @@ mysql -u"$ISUCON_DB_USER" \
 		--port "$ISUCON_DB_PORT" \
 		"$ISUCON_DB_NAME" < initial_livecomments.sql
 
+
+# isudnsの初期化
+mysql -u"$ISUCON_DB_USER" \
+    -p"$ISUCON_DB_PASSWORD" \
+    --host "localhost" \
+    --port "$ISUCON_DB_PORT" \
+    "isudns" < initdb.d/20_isudns_schema.sql
 bash ../pdns/init_zone.sh 
 
 
