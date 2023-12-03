@@ -72,7 +72,7 @@ mysql -u"$ISUCON_DB_USER" \
 # isudnsの初期化
 mysql -u"$ISUCON_DB_USER" \
     -p"$ISUCON_DB_PASSWORD" \
-    --host "192.168.0.13" \
+    --host "localhost" \
     --port "$ISUCON_DB_PORT" \
     "isudns" < initdb.d/20_isudns_schema.sql
 bash ../pdns/init_zone.sh 
