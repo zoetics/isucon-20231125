@@ -596,9 +596,15 @@ func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*L
 						break
 					}
 				}
-				iconHash := sha256.Sum256(ic)
-				tu = User{ID: u.ID, Name: u.Name, DisplayName: u.DisplayName, Description: u.Description, IconHash: fmt.Sprintf("%x", iconHash)}
-				break
+				// ic が空のときは FallbackImageHash を入れる
+				if ic == nil {
+					tu = User{ID: u.ID, Name: u.Name, DisplayName: u.DisplayName, Description: u.Description, IconHash: FallbackImageHash}
+					break
+				} else {
+					iconHash := sha256.Sum256(ic)
+					tu = User{ID: u.ID, Name: u.Name, DisplayName: u.DisplayName, Description: u.Description, IconHash: fmt.Sprintf("%x", iconHash)}
+					break
+				}
 			}
 		}
 		// tagないときは空配列を入れる
