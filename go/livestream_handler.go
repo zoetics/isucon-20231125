@@ -533,8 +533,8 @@ func fillLivestreamResponseForGet(ctx context.Context, livestreamModel Livestrea
 
 // livestreamsのモデルを一括で取得
 func fillLivestreamResponseForBulkGet(ctx context.Context, livestreamModels []*LivestreamModel) ([]Livestream, error) {
-	uids := make([]int, len(livestreamModels))
-	ids := make([]int, len(livestreamModels))
+	var uids []int
+	var ids []int
 	for _, v := range livestreamModels {
 		// v.UserID を int にして uids に追加
 		uids = append(uids, int(v.UserID))
